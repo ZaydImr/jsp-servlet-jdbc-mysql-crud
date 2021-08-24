@@ -2,16 +2,15 @@ package net.javaguides.usermanagement.dao;
 
 import net.javaguides.usermanagement.model.User;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class UserDAO {
 	
-	private String jdbcURL = "jdbc:mysql://localhost/userManagement?useSSL=false";
-	private String jdbcUsername = "root";
-	private String jdbcPassword = "root";
+	private String jdbcURL = "jdbc:mysql://localhost:3306/userManagement?useSSL=false";
+	private String jdbcUsername = "pluto";
+	private String jdbcPassword = "mr.Ziko1";
 
 	private static final String SELECT_ALL_USERS = "SELECT * FROM USERS;";
 	private static final String SELECT_USER_BY_ID = "SELECT * FROM USERS WHERE ID =?;";
@@ -19,15 +18,17 @@ public class UserDAO {
 	private static final String UPDATE_USER_SQL = "UPDATE USERS set name = ? , email = ? ,country= ? where id = ?;";
 	private static final String DELETE_USER_SQL = "DELETE FROM USERS where id = ?;";
 
-	protected Connection getConnection() {
-		Connection connection= null;
+	protected Connection getConnection(){
+		System.out.println("Connected to Database.");
 		try {
-			Class.forName("com.mysql.jdc.Driver");
-			connection = DriverManager.getConnection(jdbcURL,jdbcUsername,jdbcPassword);
-		}catch(SQLException | ClassNotFoundException e) {
-			e.printStackTrace();
-		}
-		return connection;
+			Class.forName("com.mysql.jdbc.Driver");
+	        Connection connection = DriverManager.getConnection(jdbcURL, jdbcUsername, jdbcPassword);
+	        return connection;
+	    } catch (SQLException  e ) {
+	        throw new RuntimeException("Cannot connect to database", e);
+	    }catch (ClassNotFoundException  e ) {
+	        throw new RuntimeException("Class not found", e);
+	    }
 	}
 
 	public void insertUser(User user) throws SQLException {
@@ -59,6 +60,47 @@ public class UserDAO {
 	public User GetUser(int id){
 		User user = null;
 		try(Connection connection = getConnection();
-				)
+				PreparedStatement preparedStatement = connection.prepareStatement(SELECT_USER_BY_ID);){
+				preparedStatement.setInt(1,id);
+				ResultSet rs = preparedStatement.executeQuery();
+				while(rs.next()){
+					String name = rs.getString("name");
+					String email = rs.getString("email");
+					String country = rs.getString("country");
+					user = new User(id,name,email,country);
+				}
+		}catch(SQLException e){
+			e.printStackTrace();
+		}
+		return user;
+	}
+
+	public List<User> GetAll(){
+		List<User> users = new ArrayList<>();
+		try(Connection connection = getConnection();
+			PreparedStatement preparedStatement = connection.prepareStatement(SELECT_ALL_USERS);){
+			ResultSet rs = preparedStatement.executeQuery();
+			while(rs.next()){
+				int id = rs.getInt("id");
+				String name = rs.getString("name");
+				String email = rs.getString("email");
+				String country = rs.getString("country");
+				users.add(new User(id,name,email,country));
+				
+			}
+		}catch(SQLException e){
+			e.printStackTrace();
+		}
+		return users;
+	}
+
+	public boolean deleteUser(int id) throws SQLException{
+		boolean rowDeleted;
+		try(Connection connection = getConnection();
+			PreparedStatement preparedStatement = connection.prepareStatement(DELETE_USER_SQL);){
+			preparedStatement.setInt(1,id);
+			rowDeleted = preparedStatement.executeUpdate()>0;
+		}
+		return rowDeleted;
 	}
 }
